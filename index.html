@@ -47,17 +47,20 @@
             }
         }
 
+        /* ── Header with credit ── */
         .header {
             display: flex;
             align-items: center;
             gap: 12px;
             margin-bottom: 4px;
+            flex-wrap: wrap;
         }
 
         .header h1 {
             font-size: 26px;
             font-weight: 600;
             letter-spacing: -0.3px;
+            margin-right: auto;
         }
 
         .badge {
@@ -68,7 +71,19 @@
             padding: 2px 12px;
             border-radius: 100px;
             letter-spacing: 0.2px;
-            margin-left: 4px;
+        }
+
+        .credit-link {
+            font-size: 12px;
+            color: #64748b;
+            text-decoration: none;
+            border-bottom: 1px dotted #94a3b8;
+            transition: color 0.2s, border-color 0.2s;
+            white-space: nowrap;
+        }
+        .credit-link:hover {
+            color: #1e293b;
+            border-bottom-color: #1e293b;
         }
 
         .sub {
@@ -394,11 +409,13 @@
 
     <div class="card">
 
-        <!-- Header -->
+        <!-- Header with credit link -->
         <div class="header">
             <h1>📋 Allowlist Checker</h1>
             <span class="badge">only list</span>
+            <a href="https://t.me/dbcomputer1" target="_blank" class="credit-link" title="Telegram: db computer">by db computer</a>
         </div>
+
         <div class="sub">Check if a domain is in your allowed list · <strong style="color:#991b1b;">red</strong> means not found</div>
 
         <!-- Input -->

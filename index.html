@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SpamGuard · Anti-Spam Checker</title>
+
+    <!-- Google Font (Inter) for clean typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
+
+    <style>
+        /* ── Reset & base ── */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f6f8fa;
+            color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            line-height: 1.5;
+        }
+
+        /* ── Card container ── */
+        .card {
+            max-width: 820px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 28px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.03);
+            padding: 40px 44px;
+            transition: box-shadow 0.2s;
+        }
+
+        @media (max-width: 540px) {
+            .card {
+                padding: 28px 20px;
+                border-radius: 20px;
+            }
+        }
+
+        /* ── Header ── */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .header h1 {
+            font-size: 26px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+
+        .badge {
+            background: #eef2ff;
+            color: #4338ca;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 12px;
+            border-radius: 100px;
+            letter-spacing: 0.2px;
+            margin-left: 4px;
+        }
+
+        .sub {
+            color: #64748b;
+            font-size: 15px;
+            margin-top: -2px;
+            margin-bottom: 28px;
+            border-left: 3px solid #818cf8;
+            padding-left: 16px;
+        }
+
+        /* ── Input row ── */
+        .input-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 28px;
+        }
+
+        .input-row input {
+            flex: 1;
+            min-width: 200px;
+            padding: 14px 18px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 14px;
+            font-size: 15px;
+            font-family: inherit;
+            background: #fafcff;
+            transition: border 0.2s, box-shadow 0.2s;
+            outline: none;
+            color: #0f172a;
+        }
+
+        .input-row input::placeholder {
+            color: #94a3b8;
+        }
+
+        .input-row input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.10);
+            background: #ffffff;
+        }
+
+        .input-row button {
+            padding: 14px 34px;
+            background: #1e293b;
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+            box-shadow: 0 2px 8px rgba(30, 41, 59, 0.08);
+            white-space: nowrap;
+        }
+
+        .input-row button:hover {
+            background: #0f172a;
+        }
+
+        .input-row button:active {
+            transform: scale(0.97);
+        }
+
+        .input-row button:disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        /* ── Quick examples ── */
+        .examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 12px;
+            margin-bottom: 30px;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .examples span {
+            cursor: pointer;
+            padding: 4px 0;
+            border-bottom: 1.5px dotted transparent;
+            transition: border-color 0.2s, color 0.2s;
+            font-weight: 450;
+        }
+
+        .examples span:hover {
+            border-bottom-color: #818cf8;
+            color: #1e293b;
+        }
+
+        /* ── Results area ── */
+        .results {
+            margin-top: 8px;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.35s ease, transform 0.35s ease;
+            pointer-events: none;
+        }
+
+        .results.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        /* score ring */
+        .score-ring-wrap {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+            flex-wrap: wrap;
+            padding: 20px 0 16px 0;
+            border-bottom: 1px solid #f1f5f9;
+            margin-bottom: 24px;
+        }
+
+        .ring {
+            position: relative;
+            width: 88px;
+            height: 88px;
+            flex-shrink: 0;
+        }
+
+        .ring svg {
+            transform: rotate(-90deg);
+            width: 88px;
+            height: 88px;
+        }
+
+        .ring .bg {
+            fill: none;
+            stroke: #eef2f6;
+            stroke-width: 7;
+        }
+
+        .ring .progress {
+            fill: none;
+            stroke-width: 7;
+            stroke-linecap: round;
+            stroke-dasharray: 226.19;
+            stroke-dashoffset: 226.19;
+            transition: stroke-dashoffset 0.7s ease, stroke 0.3s;
+        }
+
+        .ring .score-label {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .ring .score-label small {
+            font-size: 16px;
+            font-weight: 400;
+            color: #94a3b8;
+            margin-left: 1px;
+        }
+
+        .verdict {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: -0.2px;
+        }
+
+        .verdict .sub-text {
+            font-weight: 400;
+            font-size: 14px;
+            color: #64748b;
+            display: block;
+            margin-top: 4px;
+        }
+
+        /* ── Check list ── */
+        .check-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .check-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: #fafcff;
+            border-radius: 12px;
+            border: 1px solid #f1f5f9;
+            transition: background 0.15s;
+        }
+
+        .check-item .left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+
+        .check-item .left .icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex-shrink: 0;
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .check-item .left .name {
+            font-weight: 500;
+        }
+
+        .check-item .left .detail {
+            color: #64748b;
+            font-size: 13px;
+            margin-left: 4px;
+        }
+
+        .check-item .status {
+            font-size: 13px;
+            font-weight: 500;
+            padding: 2px 12px;
+            border-radius: 100px;
+            background: #f1f5f9;
+            color: #475569;
+            white-space: nowrap;
+        }
+
+        .check-item .status.pass {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .check-item .status.fail {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .check-item .status.warn {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        /* ── Empty state ── */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px 20px;
+            color: #94a3b8;
+        }
+
+        .empty-state .big-icon {
+            font-size: 42px;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        /* ── Footer ── */
+        .footer-note {
+            margin-top: 28px;
+            font-size: 12px;
+            color: #94a3b8;
+            text-align: center;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 22px;
+            letter-spacing: 0.2px;
+        }
+
+        /* ── Utilities ── */
+        .hidden {
+            display: none !important;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .gap-8 {
+            gap: 8px;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        /* ── Loading shimmer ── */
+        .loading-shimmer {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2.5px solid #e2e8f0;
+            border-top-color: #1e293b;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+
+        <!-- Header -->
+        <div class="header">
+            <h1>🛡️ SpamGuard</h1>
+            <span class="badge">beta</span>
+        </div>
+        <div class="sub">Check if a website shows spam signals · URL reputation scanner</div>
+
+        <!-- Input -->
+        <div class="input-row">
+            <input type="text" id="urlInput" placeholder="https://example.com" spellcheck="false" autofocus />
+            <button id="checkBtn">Check</button>
+        </div>
+
+        <!-- Quick examples -->
+        <div class="examples">
+            <span>Try:</span>
+            <span data-url="https://example.com">example.com</span>
+            <span data-url="https://google.com">google.com</span>
+            <span data-url="https://suspicious-site-123.xyz">suspicious‑site‑123.xyz</span>
+            <span data-url="https://news-4u.click">news‑4u.click</span>
+        </div>
+
+        <!-- ─── RESULTS ─── -->
+        <div class="results" id="resultsContainer">
+
+            <!-- Score + verdict -->
+            <div class="score-ring-wrap">
+                <div class="ring">
+                    <svg viewBox="0 0 80 80">
+                        <circle class="bg" cx="40" cy="40" r="36" />
+                        <circle class="progress" id="progressCircle" cx="40" cy="40" r="36" />
+                    </svg>
+                    <div class="score-label" id="scoreLabel">0<small>%</small></div>
+                </div>
+                <div>
+                    <div class="verdict" id="verdictText">—</div>
+                    <div class="sub-text" id="verdictSub">Analysis will appear here</div>
+                </div>
+            </div>
+
+            <!-- Check items -->
+            <div class="check-list" id="checkList">
+                <!-- injected by JS -->
+            </div>
+
+        </div>
+
+        <!-- Empty state (shown when no results) -->
+        <div id="emptyState" class="empty-state">
+            <div class="big-icon">🔍</div>
+            <p>Enter a URL above to check for spam indicators<br />— domain reputation, SSL, content signals &amp; more</p>
+        </div>
+
+        <div class="footer-note">Simulated analysis · for demonstration purposes only</div>
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            const urlInput = document.getElementById('urlInput');
+            const checkBtn = document.getElementById('checkBtn');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const emptyState = document.getElementById('emptyState');
+            const progressCircle = document.getElementById('progressCircle');
+            const scoreLabel = document.getElementById('scoreLabel');
+            const verdictText = document.getElementById('verdictText');
+            const verdictSub = document.getElementById('verdictSub');
+            const checkList = document.getElementById('checkList');
+
+            // ─── Helpers ──────────────────────────────────────────────
+            function normalizeUrl(raw) {
+                let s = raw.trim();
+                if (!s) return null;
+                if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
+                try {
+                    const url = new URL(s);
+                    return url.href;
+                } catch (_) {
+                    return null;
+                }
+            }
+
+            function getDomain(urlStr) {
+                try {
+                    const u = new URL(urlStr);
+                    return u.hostname;
+                } catch (_) { return null; }
+            }
+
+            // ─── Simulated checks ────────────────────────────────────
+            function runChecks(url) {
+                const domain = getDomain(url);
+                const isHttps = url.startsWith('https://');
+                const length = url.length;
+                const hasWWW = /^https?:\/\/www\./i.test(url);
+                const hasIP = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/.test(domain || '');
+                const hasDash = (domain || '').includes('-');
+                const pathDepth = (url.split('/').length - 3); // after domain
+                const hasQuery = url.includes('?');
+                const hasHash = url.includes('#');
+
+                // Domain "age" simulation (based on domain length / chars)
+                let domainAgeScore = 0;
+                if (domain) {
+                    const parts = domain.split('.');
+                    const tld = parts[parts.length - 1] || '';
+                    // common "spammy" TLDs
+                    const spamTlds = ['xyz', 'top', 'club', 'work', 'click', 'review', 'online', 'live', 'site', 'tech'];
+                    if (spamTlds.includes(tld.toLowerCase())) domainAgeScore -= 20;
+                    if (domain.length > 20) domainAgeScore -= 10;
+                    if (hasDash) domainAgeScore -= 8;
+                    if (hasIP) domainAgeScore -= 25;
+                    if (/[0-9]{4,}/.test(domain)) domainAgeScore -= 12;
+                    if (hasWWW) domainAgeScore += 5;
+                    if (domain.length < 10) domainAgeScore += 8;
+                    // "legit" TLD bump
+                    const legitTlds = ['com', 'org', 'net', 'edu', 'gov', 'io', 'co', 'app'];
+                    if (legitTlds.includes(tld.toLowerCase())) domainAgeScore += 10;
+                }
+
+                // SSL
+                let sslScore = 0;
+                if (isHttps) {
+                    sslScore += 25;
+                    if (domain && domain.length > 6) sslScore += 5;
+                } else {
+                    sslScore -= 15;
+                }
+
+                // Content signals (simulated from URL structure)
+                let contentScore = 0;
+                if (pathDepth <= 2) contentScore += 10;
+                else if (pathDepth <= 4) contentScore += 2;
+                else contentScore -= 8;
+                if (hasQuery) contentScore -= 5;
+                if (hasHash) contentScore -= 3;
+                if (length > 80) contentScore -= 6;
+                if (length < 30) contentScore += 6;
+
+                // Reputation (simulated)
+                let repScore = 0;
+                if (domain) {
+                    const lower = domain.toLowerCase();
+                    if (lower.includes('suspicious') || lower.includes('spam') || lower.includes('fake') || lower.includes(
+                            'scam')) {
+                        repScore -= 30;
+                    }
+                    if (lower.includes('secure') || lower.includes('official') || lower.includes('verify')) {
+                        repScore += 5;
+                    }
+                    if (lower.includes('bank') || lower.includes('pay') || lower.includes('login')) {
+                        repScore -= 5; // often phishy
+                    }
+                    if (lower.includes('google') || lower.includes('apple') || lower.includes('microsoft') || lower
+                        .includes('amazon')) {
+                        repScore += 12;
+                    }
+                    // random numbers at start/end
+                    if (/^[0-9]/.test(lower) || /[0-9]$/.test(lower)) repScore -= 10;
+                }
+
+                // combined score (0–100)
+                let rawScore = 50 + domainAgeScore + sslScore + contentScore + repScore;
+                // clamp
+                rawScore = Math.max(0, Math.min(100, rawScore));
+
+                // Generate individual check results
+                const checks = [];
+
+                // 1. Domain reputation
+                let repStatus, repDetail;
+                if (repScore >= 8) { repStatus = 'pass';
+                    repDetail = 'Clean reputation'; } else if (repScore >= -5) { repStatus = 'warn';
+                    repDetail = 'Mixed signals'; } else { repStatus = 'fail';
+                    repDetail = 'Suspicious domain'; }
+                checks.push({ id: 'domain', label: 'Domain reputation', detail: repDetail, status: repStatus });
+
+                // 2. SSL / HTTPS
+                let sslStatus, sslDetail;
+                if (isHttps) { sslStatus = 'pass';
+                    sslDetail = 'Valid HTTPS connection'; } else { sslStatus = 'fail';
+                    sslDetail = 'No HTTPS — insecure'; }
+                checks.push({ id: 'ssl', label: 'SSL &amp; security', detail: sslDetail, status: sslStatus });
+
+                // 3. URL structure
+                let structStatus, structDetail;
+                if (length < 60 && pathDepth <= 2 && !hasQuery && !hasIP) { structStatus = 'pass';
+                    structDetail = 'Clean URL structure'; } else if (length > 80 || hasIP || pathDepth > 4) { structStatus =
+                        'fail';
+                    structDetail = 'Abnormal URL pattern'; } else { structStatus = 'warn';
+                    structDetail = 'Some unusual elements'; }
+                checks.push({ id: 'structure', label: 'URL structure', detail: structDetail, status: structStatus });
+
+                // 4. Content signals
+                let contStatus, contDetail;
+                if (contentScore >= 8) { contStatus = 'pass';
+                    contDetail = 'Healthy content path'; } else if (contentScore >= -2) { contStatus = 'warn';
+                    contDetail = 'Moderate content signals'; } else { contStatus = 'fail';
+                    contDetail = 'Sparse or cluttered path'; }
+                checks.push({ id: 'content', label: 'Content signals', detail: contDetail, status: contStatus });
+
+                // 5. Domain age (simulated)
+                let ageStatus, ageDetail;
+                if (domainAgeScore >= 10) { ageStatus = 'pass';
+                    ageDetail = 'Established domain pattern'; } else if (domainAgeScore >= -5) { ageStatus = 'warn';
+                    ageDetail = 'Recent or mixed domain'; } else { ageStatus = 'fail';
+                    ageDetail = 'New or suspicious TLD'; }
+                checks.push({ id: 'age', label: 'Domain age signal', detail: ageDetail, status: ageStatus });
+
+                // 6. Spam keywords (simulated)
+                let spamStatus, spamDetail;
+                const spammyTerms = ['free', 'win', 'cash', 'bonus', 'click', 'offer', 'viagra', 'porn', 'xxx', 'casino',
+                    'lottery'
+                ];
+                let foundSpam = 0;
+                if (domain) {
+                    const lower = domain.toLowerCase();
+                    spammyTerms.forEach(t => { if (lower.includes(t)) foundSpam++; });
+                }
+                if (foundSpam === 0) { spamStatus = 'pass';
+                    spamDetail = 'No obvious spam terms'; } else if (foundSpam <= 1) { spamStatus = 'warn';
+                    spamDetail = 'Contains mild spam keywords'; } else { spamStatus = 'fail';
+                    spamDetail = 'Multiple spam keywords detected'; }
+                checks.push({ id: 'keywords', label: 'Spam keywords', detail: spamDetail, status: spamStatus });
+
+                return {
+                    score: Math.round(rawScore),
+                    checks: checks,
+                    domain: domain || 'unknown'
+                };
+            }
+
+            // ─── Render results ──────────────────────────────────────
+            function renderResults(data) {
+                const score = data.score;
+                const checks = data.checks;
+
+                // ring
+                const circumference = 226.19;
+                const offset = circumference - (score / 100) * circumference;
+                progressCircle.style.strokeDashoffset = offset;
+
+                // color
+                let color = '#22c55e'; // green
+                if (score < 40) color = '#ef4444';
+                else if (score < 65) color = '#eab308';
+                progressCircle.style.stroke = color;
+
+                // score label
+                scoreLabel.innerHTML = score + '<small>%</small>';
+
+                // verdict
+                let verdict, sub;
+                if (score >= 75) { verdict = '✅ Low risk · clean';
+                    sub = 'No major spam indicators found.'; } else if (score >= 50) { verdict = '⚠️ Moderate risk';
+                    sub = 'Some signals deserve attention.'; } else { verdict = '🚨 High risk · spam likely';
+                    sub = 'Strong indicators of spam or malicious intent.'; }
+                verdictText.textContent = verdict;
+                verdictSub.textContent = sub;
+
+                // check list
+                checkList.innerHTML = '';
+                checks.forEach(c => {
+                    const item = document.createElement('div');
+                    item.className = 'check-item';
+
+                    const left = document.createElement('div');
+                    left.className = 'left';
+
+                    const iconSpan = document.createElement('span');
+                    iconSpan.className = 'icon';
+                    if (c.status === 'pass') iconSpan.textContent = '✅';
+                    else if (c.status === 'fail') iconSpan.textContent = '❌';
+                    else iconSpan.textContent = '⚠️';
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'name';
+                    nameSpan.innerHTML = c.label;
+                    const detailSpan = document.createElement('span');
+                    detailSpan.className = 'detail';
+                    detailSpan.textContent = c.detail;
+
+                    left.appendChild(iconSpan);
+                    left.appendChild(nameSpan);
+                    left.appendChild(detailSpan);
+
+                    const statusSpan = document.createElement('span');
+                    statusSpan.className = 'status ' + c.status;
+                    statusSpan.textContent = c.status === 'pass' ? 'Pass' : c.status === 'fail' ? 'Fail' : 'Warn';
+
+                    item.appendChild(left);
+                    item.appendChild(statusSpan);
+                    checkList.appendChild(item);
+                });
+            }
+
+            // ─── Main analysis ──────────────────────────────────────
+            function analyze(url) {
+                const normalized = normalizeUrl(url);
+                if (!normalized) {
+                    alert('Please enter a valid URL (e.g. https://example.com)');
+                    return;
+                }
+
+                // show loading state
+                checkBtn.disabled = true;
+                checkBtn.innerHTML = '<span class="loading-shimmer"></span> Analyzing…';
+                resultsContainer.classList.remove('visible');
+                emptyState.classList.add('hidden');
+
+                // simulate async check
+                setTimeout(() => {
+                    const data = runChecks(normalized);
+                    renderResults(data);
+                    resultsContainer.classList.add('visible');
+
+                    checkBtn.disabled = false;
+                    checkBtn.textContent = 'Check';
+                    urlInput.value = normalized; // show normalized
+                }, 650);
+            }
+
+            // ─── Event listeners ────────────────────────────────────
+
+            // Check button
+            checkBtn.addEventListener('click', () => {
+                analyze(urlInput.value);
+            });
+
+            // Enter key
+            urlInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    analyze(urlInput.value);
+                }
+            });
+
+            // Quick example clicks
+            document.querySelectorAll('.examples span[data-url]').forEach(el => {
+                el.addEventListener('click', () => {
+                    const val = el.getAttribute('data-url');
+                    urlInput.value = val;
+                    analyze(val);
+                });
+            });
+
+            // Auto-focus on load
+            urlInput.focus();
+
+            // ─── Initial empty state ───────────────────────────────
+            // ensure empty state is visible
+            emptyState.classList.remove('hidden');
+            resultsContainer.classList.remove('visible');
+
+        })();
+    </script>
+
+</body>
+</html>

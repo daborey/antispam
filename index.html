@@ -341,14 +341,66 @@
             font-size: 14px;
         }
 
-        /* ── Footer ── */
-        .footer-note {
+        /* ── Allowlist Manager ── */
+        .list-manager {
             margin-top: 28px;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 20px;
+        }
+
+        .list-manager summary {
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            color: #334155;
+            padding: 6px 0;
+            display: inline-block;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .list-manager summary:hover {
+            color: #0f172a;
+        }
+
+        .list-manager textarea {
+            width: 100%;
+            margin-top: 12px;
+            padding: 12px 14px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: 'Inter', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            background: #fafcff;
+            resize: vertical;
+            transition: border 0.2s;
+            color: #0f172a;
+        }
+
+        .list-manager textarea:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.06);
+        }
+
+        .list-manager .hint {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 6px;
+        }
+
+        .list-manager .hint strong {
+            color: #1e293b;
+        }
+
+        .footer-note {
+            margin-top: 18px;
             font-size: 12px;
             color: #94a3b8;
             text-align: center;
             border-top: 1px solid #f1f5f9;
-            padding-top: 22px;
+            padding-top: 20px;
             letter-spacing: 0.2px;
         }
 
@@ -397,9 +449,9 @@
         <!-- Header -->
         <div class="header">
             <h1>🛡️ SpamGuard</h1>
-            <span class="badge">beta</span>
+            <span class="badge">allowlist</span>
         </div>
-        <div class="sub">Check if a website shows spam signals · URL reputation scanner</div>
+        <div class="sub">Check if a website is in your allowlist · shows <strong style="color:#991b1b;">red</strong> if not found</div>
 
         <!-- Input -->
         <div class="input-row">
@@ -410,10 +462,10 @@
         <!-- Quick examples -->
         <div class="examples">
             <span>Try:</span>
-            <span data-url="https://example.com">example.com</span>
             <span data-url="https://google.com">google.com</span>
+            <span data-url="https://github.com">github.com</span>
+            <span data-url="https://stackoverflow.com">stackoverflow.com</span>
             <span data-url="https://suspicious-site-123.xyz">suspicious‑site‑123.xyz</span>
-            <span data-url="https://news-4u.click">news‑4u.click</span>
         </div>
 
         <!-- ─── RESULTS ─── -->
@@ -444,16 +496,48 @@
         <!-- Empty state (shown when no results) -->
         <div id="emptyState" class="empty-state">
             <div class="big-icon">🔍</div>
-            <p>Enter a URL above to check for spam indicators<br />— domain reputation, SSL, content signals &amp; more</p>
+            <p>Enter a URL above to check against your allowlist<br />— any domain <strong>not</strong> in the list will show <strong style="color:#991b1b;">red</strong></p>
         </div>
 
-        <div class="footer-note">Simulated analysis · for demonstration purposes only</div>
+        <!-- ─── ALLOWLIST MANAGER ─── -->
+        <div class="list-manager">
+            <details>
+                <summary>⚙️ Manage Allowlist (one domain per line)</summary>
+                <textarea id="allowlistTextarea" rows="6" spellcheck="false"></textarea>
+                <div class="hint">
+                    <strong>💡 Tip:</strong> Domains in this list will show as <span style="color:#166534; background:#dcfce7; padding:0 8px; border-radius:4px;">Pass</span>. 
+                    Any other domain will show as <span style="color:#991b1b; background:#fee2e2; padding:0 8px; border-radius:4px;">Fail (red)</span>.
+                </div>
+            </details>
+        </div>
+
+        <div class="footer-note">Simulated analysis · list comparison is fully client-side</div>
     </div>
 
     <script>
         (function() {
             'use strict';
 
+            // ─── DEFAULT ALLOWLIST ──────────────────────────────────
+            // Edit this array to change the default list, or use the UI textarea.
+            const DEFAULT_ALLOWLIST = [
+                'google.com',
+                'github.com',
+                'stackoverflow.com',
+                'youtube.com',
+                'facebook.com',
+                'amazon.com',
+                'wikipedia.org',
+                'reddit.com',
+                'twitter.com',
+                'instagram.com',
+                'linkedin.com',
+                'microsoft.com',
+                'apple.com',
+                'netflix.com'
+            ];
+
+            // ─── DOM refs ────────────────────────────────────────────
             const urlInput = document.getElementById('urlInput');
             const checkBtn = document.getElementById('checkBtn');
             const resultsContainer = document.getElementById('resultsContainer');
@@ -463,8 +547,28 @@
             const verdictText = document.getElementById('verdictText');
             const verdictSub = document.getElementById('verdictSub');
             const checkList = document.getElementById('checkList');
+            const allowlistTextarea = document.getElementById('allowlistTextarea');
 
-            // ─── Helpers ──────────────────────────────────────────────
+            // ─── State ──────────────────────────────────────────────
+            let allowlist = [...DEFAULT_ALLOWLIST];
+
+            // ─── Sync textarea with default list ───────────────────
+            allowlistTextarea.value = DEFAULT_ALLOWLIST.join('\n');
+
+            // ─── Update allowlist from textarea ────────────────────
+            function updateAllowlist() {
+                const raw = allowlistTextarea.value;
+                const lines = raw.split('\n')
+                    .map(s => s.trim().toLowerCase())
+                    .filter(s => s.length > 0);
+                allowlist = lines;
+            }
+
+            allowlistTextarea.addEventListener('input', updateAllowlist);
+            // initial sync
+            updateAllowlist();
+
+            // ─── Helpers ────────────────────────────────────────────
             function normalizeUrl(raw) {
                 let s = raw.trim();
                 if (!s) return null;
@@ -484,7 +588,7 @@
                 } catch (_) { return null; }
             }
 
-            // ─── Simulated checks ────────────────────────────────────
+            // ─── Core analysis ──────────────────────────────────────
             function runChecks(url) {
                 const domain = getDomain(url);
                 const isHttps = url.startsWith('https://');
@@ -501,7 +605,6 @@
                 if (domain) {
                     const parts = domain.split('.');
                     const tld = parts[parts.length - 1] || '';
-                    // common "spammy" TLDs
                     const spamTlds = ['xyz', 'top', 'club', 'work', 'click', 'review', 'online', 'live', 'site', 'tech'];
                     if (spamTlds.includes(tld.toLowerCase())) domainAgeScore -= 20;
                     if (domain.length > 20) domainAgeScore -= 10;
@@ -510,7 +613,6 @@
                     if (/[0-9]{4,}/.test(domain)) domainAgeScore -= 12;
                     if (hasWWW) domainAgeScore += 5;
                     if (domain.length < 10) domainAgeScore += 8;
-                    // "legit" TLD bump
                     const legitTlds = ['com', 'org', 'net', 'edu', 'gov', 'io', 'co', 'app'];
                     if (legitTlds.includes(tld.toLowerCase())) domainAgeScore += 10;
                 }
@@ -546,22 +648,20 @@
                         repScore += 5;
                     }
                     if (lower.includes('bank') || lower.includes('pay') || lower.includes('login')) {
-                        repScore -= 5; // often phishy
+                        repScore -= 5;
                     }
                     if (lower.includes('google') || lower.includes('apple') || lower.includes('microsoft') || lower
                         .includes('amazon')) {
                         repScore += 12;
                     }
-                    // random numbers at start/end
                     if (/^[0-9]/.test(lower) || /[0-9]$/.test(lower)) repScore -= 10;
                 }
 
                 // combined score (0–100)
                 let rawScore = 50 + domainAgeScore + sslScore + contentScore + repScore;
-                // clamp
                 rawScore = Math.max(0, Math.min(100, rawScore));
 
-                // Generate individual check results
+                // ─── Build check list ──────────────────────────────
                 const checks = [];
 
                 // 1. Domain reputation
@@ -596,7 +696,7 @@
                     contDetail = 'Sparse or cluttered path'; }
                 checks.push({ id: 'content', label: 'Content signals', detail: contDetail, status: contStatus });
 
-                // 5. Domain age (simulated)
+                // 5. Domain age signal
                 let ageStatus, ageDetail;
                 if (domainAgeScore >= 10) { ageStatus = 'pass';
                     ageDetail = 'Established domain pattern'; } else if (domainAgeScore >= -5) { ageStatus = 'warn';
@@ -604,7 +704,7 @@
                     ageDetail = 'New or suspicious TLD'; }
                 checks.push({ id: 'age', label: 'Domain age signal', detail: ageDetail, status: ageStatus });
 
-                // 6. Spam keywords (simulated)
+                // 6. Spam keywords
                 let spamStatus, spamDetail;
                 const spammyTerms = ['free', 'win', 'cash', 'bonus', 'click', 'offer', 'viagra', 'porn', 'xxx', 'casino',
                     'lottery'
@@ -619,6 +719,18 @@
                     spamDetail = 'Contains mild spam keywords'; } else { spamStatus = 'fail';
                     spamDetail = 'Multiple spam keywords detected'; }
                 checks.push({ id: 'keywords', label: 'Spam keywords', detail: spamDetail, status: spamStatus });
+
+                // ─── 7. ALLOWLIST CHECK (the main feature) ────────
+                let allowlistStatus, allowlistDetail;
+                const domainLower = domain ? domain.toLowerCase() : '';
+                if (allowlist.includes(domainLower)) {
+                    allowlistStatus = 'pass';
+                    allowlistDetail = '✅ Domain is approved in allowlist';
+                } else {
+                    allowlistStatus = 'fail'; // 👈 This triggers RED
+                    allowlistDetail = '❌ Domain not found in allowlist';
+                }
+                checks.push({ id: 'allowlist', label: '📋 Allowlist Match', detail: allowlistDetail, status: allowlistStatus });
 
                 return {
                     score: Math.round(rawScore),
@@ -637,16 +749,13 @@
                 const offset = circumference - (score / 100) * circumference;
                 progressCircle.style.strokeDashoffset = offset;
 
-                // color
-                let color = '#22c55e'; // green
+                let color = '#22c55e';
                 if (score < 40) color = '#ef4444';
                 else if (score < 65) color = '#eab308';
                 progressCircle.style.stroke = color;
 
-                // score label
                 scoreLabel.innerHTML = score + '<small>%</small>';
 
-                // verdict
                 let verdict, sub;
                 if (score >= 75) { verdict = '✅ Low risk · clean';
                     sub = 'No major spam indicators found.'; } else if (score >= 50) { verdict = '⚠️ Moderate risk';
@@ -655,7 +764,6 @@
                 verdictText.textContent = verdict;
                 verdictSub.textContent = sub;
 
-                // check list
                 checkList.innerHTML = '';
                 checks.forEach(c => {
                     const item = document.createElement('div');
@@ -699,13 +807,11 @@
                     return;
                 }
 
-                // show loading state
                 checkBtn.disabled = true;
                 checkBtn.innerHTML = '<span class="loading-shimmer"></span> Analyzing…';
                 resultsContainer.classList.remove('visible');
                 emptyState.classList.add('hidden');
 
-                // simulate async check
                 setTimeout(() => {
                     const data = runChecks(normalized);
                     renderResults(data);
@@ -713,18 +819,15 @@
 
                     checkBtn.disabled = false;
                     checkBtn.textContent = 'Check';
-                    urlInput.value = normalized; // show normalized
+                    urlInput.value = normalized;
                 }, 650);
             }
 
             // ─── Event listeners ────────────────────────────────────
-
-            // Check button
             checkBtn.addEventListener('click', () => {
                 analyze(urlInput.value);
             });
 
-            // Enter key
             urlInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -732,7 +835,6 @@
                 }
             });
 
-            // Quick example clicks
             document.querySelectorAll('.examples span[data-url]').forEach(el => {
                 el.addEventListener('click', () => {
                     const val = el.getAttribute('data-url');
@@ -741,11 +843,8 @@
                 });
             });
 
-            // Auto-focus on load
+            // Auto-focus
             urlInput.focus();
-
-            // ─── Initial empty state ───────────────────────────────
-            // ensure empty state is visible
             emptyState.classList.remove('hidden');
             resultsContainer.classList.remove('visible');
 
